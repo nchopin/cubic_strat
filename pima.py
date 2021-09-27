@@ -11,14 +11,15 @@ scale_prior = 10.
 scale_logit = 1.4 # TODO
 
 min_neval = 100
-max_neval = 10**7
+max_neval = 10**5
 max_order = 4
 nks = 10
 nreps = 25
 ident = 'pima%i_scale%.2f' % (d, scale_logit)
 
-with open('intermediate_results/pima_mean_cov.pkl', 'rb') as f:
-    dt = pickle.load(f)
+with open('results/pima_mean_cov.pkl', 'rb') as f:
+    dts = pickle.load(f)
+    dt = dts[d]
 
 def logpost(beta):
     loglik = np.sum( - np.log(1. + np.exp(-np.dot(preds, beta))))
@@ -27,8 +28,8 @@ def logpost(beta):
 
 def phi(u):
     z = stats.logistic.ppf(u)
-    x = dt['mu'] + z @ dt['Ct'] / scale_logit
-    cst = 0.5 * np.sum(np.log(np.diag(dt['Ct']))) - d * np.log(scale_logit)
+    x = dt['mu'] + z @ dt['Cu'] / scale_logit
+    cst = 0.5 * np.sum(np.log(np.diag(dt['Cu']))) - d * np.log(scale_logit)
     lq = np.sum(stats.logistic.logpdf(z), axis=1) - cst
     N, p = u.shape
     lp = np.empty(N)

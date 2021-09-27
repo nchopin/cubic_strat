@@ -14,7 +14,6 @@ lkmax = (np.log(pb.max_neval / pb.max_order)) / pb.d
 lkrange = np.linspace(lkmin, lkmax, pb.nks)
 karr = np.unique(np.round(np.exp(lkrange))).astype('int')
 ks = list(karr)
-
 print('k=%r' % ks)
 
 mp_results = multiplexer(f=strat.vanish_estimates, k=ks, d=pb.d, phi=pb.phi,
@@ -28,5 +27,6 @@ for r in mp_results:
         results.append(dr)
 
 df = pd.DataFrame(results)
+if hasattr(pb, 'true_val'):
+    df['rmse'] = (df['est'] / pb.true_val - 1.)**2
 df.to_pickle('results/%s.pkl' % pb.ident)
-
