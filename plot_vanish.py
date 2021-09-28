@@ -17,16 +17,22 @@ else:
 # plots
 #######
 plt.style.use('ggplot')
-plt.figure()
+colors = [None, 'r', 'b', 'm', 'k', 'c', 'y']
+fig, ax = plt.subplots()
 min_order, max_order = dfm['order'].min(), dfm['order'].max()
 for o in range(min_order, max_order + 1):
+    col = colors[o]
     dfo = dfm[dfm['order']==o]
-    plt.plot(dfo['neval'], dfo[key], label=o)
+    ax.plot(dfo['neval'], dfo[key], col, lw=3, alpha=0.8)
+    k = dfo['neval'].argmax()
+    x = dfo['neval'].to_numpy()[k] * 1.2
+    y = dfo[key].to_numpy()[k]
+    ax.text(x, y, '%i' % o, va='top', ma='left', color=col)
 plt.title(ident)
 plt.xlabel('nr evaluations')
 plt.ylabel(key)
 plt.xscale('log')
 plt.yscale('log')
-plt.legend()
+# plt.legend()
 plt.savefig('plots/%s_var_vs_N.pdf' % ident)
 plt.show()
