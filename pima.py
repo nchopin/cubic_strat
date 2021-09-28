@@ -7,14 +7,14 @@ from particles import datasets as dts
 dataset = dts.Pima()
 d = 2
 preds = dataset.data[:, :d]
-scale_prior = 10.
-scale_logit = 1.4 # TODO
+scale_prior = 5.
+scale_logit = 1.0 # TODO
 
 min_neval = 100
-max_neval = 10**5
-max_order = 4
+max_neval = 10**9
+max_order = 6
 nks = 10
-nreps = 25
+nreps = 50
 ident = 'pima%i_scale%.2f' % (d, scale_logit)
 
 with open('results/pima_mean_cov.pkl', 'rb') as f:

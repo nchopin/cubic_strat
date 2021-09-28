@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-ident = 'pima2_scale1.40'
+ident = 'pima2_scale1.00'
 
 df = pd.read_pickle('results/%s.pkl' % ident)
 if 'rmse' in df:
