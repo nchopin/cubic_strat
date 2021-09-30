@@ -4,7 +4,7 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat
 
-import pima_mat as pb
+import pima as pb
 
 # compute range of values for k
 lkmin = (np.log(pb.min_neval / pb.max_order)) / pb.d
