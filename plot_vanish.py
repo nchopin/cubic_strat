@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-ident = 'pima2_scale1.00'
+ident = 'pima2-tau1.0-scale1.5'
 
 df = pd.read_pickle('results/%s.pkl' % ident)
 if 'rmse' in df:
@@ -17,7 +17,7 @@ else:
 # plots
 #######
 plt.style.use('ggplot')
-colors = [None, 'r', 'b', 'm', 'k', 'c', 'y']
+colors = [None, 'r', 'b', 'm', 'k', 'c', 'y', 'w', 'g']
 fig, ax = plt.subplots()
 min_order, max_order = dfm['order'].min(), dfm['order'].max()
 for o in range(min_order, max_order + 1):

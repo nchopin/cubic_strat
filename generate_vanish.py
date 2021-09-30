@@ -4,10 +4,9 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat
 
-# import logit as pb  # TODO
-# import beta2D as pb
-import pima as pb
+import pima_mat as pb
 
+# compute range of values for k
 lkmin = (np.log(pb.min_neval / pb.max_order)) / pb.d
 lkmin = max(lkmin, np.log(2.)) # 1 not allowed
 lkmax = (np.log(pb.max_neval / pb.max_order)) / pb.d
