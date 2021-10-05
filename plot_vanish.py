@@ -1,9 +1,13 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-ident = 'pima2-tau0.5-scale1.0'
+d = 4
+tau = 1.
+scale = 1.5
+ident = 'pima'
 
-df = pd.read_pickle('results/%s.pkl' % ident)
+file_name = '%s%i-tau%.1f-scale%.1f' % (ident, d, tau, scale)
+df = pd.read_pickle('results/%s.pkl' % file_name)
 if 'rmse' in df:
     dfm = df.groupby(['k', 'order']).mean().reset_index()
     key = 'mse'
@@ -40,11 +44,11 @@ for o in range(min_order, max_order + 1):
     x = dfo['neval'].to_numpy()[k] * 1.2
     y = dfo[key].to_numpy()[k]
     ax.text(x, y, '%i' % o, va='top', ma='left', color=col)
-plt.title(ident)
+plt.title(r'%s $s=%i$' % (ident.capitalize(), d))
 plt.xlabel('nr evaluations')
 plt.ylabel(key)
 plt.xscale('log')
 plt.yscale('log')
 # plt.legend()
-plt.savefig('plots/%s_var_vs_N.pdf' % ident)
+plt.savefig('plots/%s_var_vs_N.pdf' % file_name)
 plt.show()

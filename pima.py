@@ -11,8 +11,8 @@ scale_prior = 5.
 scale_prop = 1.5
 tau = 1.
 
-min_neval = 10
-max_neval = 10**8
+min_neval = 10**3
+max_neval = 5. * 10**8
 max_order = 10
 nks = 10
 nreps = 50
