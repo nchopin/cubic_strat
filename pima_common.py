@@ -5,27 +5,17 @@ from scipy import stats
 from particles import datasets as dts
 
 dataset = dts.Pima()
-d = 4
-preds = dataset.data[:, :d]
+preds = dataset.data
 scale_prior = 5.
-scale_prop = 1.5
-tau = 1.
 
-min_neval = 10**3
-max_neval = 5. * 10**8
-max_order = 10
-nks = 10
-nreps = 50
-ident = 'pima%i-tau%.1f-scale%.1f' % (d, tau, scale_prop)
 
 with open('results/pima_mean_cov.pkl', 'rb') as f:
     dts = pickle.load(f)
-    dt = dts[d]
-    mu = dt['mu']
-    Cu = dt['Cu'] / scale_prop
 
 def logpost(beta):
-    loglik = np.sum( - np.log(1. + np.exp(-np.dot(preds, beta))))
+    dimbeta = beta.shape[-1]
+    lin = np.dot(preds[:, :dimbeta], beta)
+    loglik = np.sum( - np.log(1. + np.exp(-lin)))
     logprior = -(0.5 / scale_prior**2) * np.sum(beta**2)
     return (logprior + loglik)
 
@@ -38,14 +28,16 @@ def psi(u, t):
     ljac = np.sum(np.log(jac), axis=1)
     return z, ljac
 
-def phi(u):
-    N, p = u.shape
+def phi(u, tau=1., scale_prop=1.5):
+    N, d = u.shape
     z, ljac = psi(u, tau)
+    mu = dts[d]
+    Cu = dts[d] / scale_prop
     x = mu + z @ Cu
     cst = 0.5 * np.sum(np.log(np.diag(dt['Cu']))) 
     lq = ljac - cst
     lp = np.empty(N)
     for n in range(N):
         lp[n] = logpost(x[n, :])
-    lw = lp - lq - dt['maxlp']
+    lw = lp - lq - dts[d]['maxlp']
     return np.exp(lw)
