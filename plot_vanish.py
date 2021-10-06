@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-d = 4
+d = 2
 tau = 1.
 scale = 1.5
 ident = 'pima'

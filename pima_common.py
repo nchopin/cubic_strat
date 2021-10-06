@@ -31,10 +31,10 @@ def psi(u, t):
 def phi(u, tau=1., scale_prop=1.5):
     N, d = u.shape
     z, ljac = psi(u, tau)
-    mu = dts[d]
-    Cu = dts[d] / scale_prop
+    mu = dts[d]['mu']
+    Cu = dts[d]['Cu'] / scale_prop
     x = mu + z @ Cu
-    cst = 0.5 * np.sum(np.log(np.diag(dt['Cu']))) 
+    cst = 0.5 * np.sum(np.log(np.diag(Cu)))
     lq = ljac - cst
     lp = np.empty(N)
     for n in range(N):
