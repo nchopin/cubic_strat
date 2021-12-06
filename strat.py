@@ -4,14 +4,13 @@ Nested stratified estimators.
 
 """
 
+from collections import Counter
 import itertools
 import functools
 
 import numpy as np
 from numpy import random
 from scipy import linalg
-
-import numdiff
 
 MAX_SIZE = 10**5
 INT_TYPE = np.int32  # SIGNED INT, YOU DIM-WIT!!!
@@ -171,80 +170,100 @@ def vanish_estimates(k=10, d=2, order=1, phi=None):
 # General (non-vanishing) functions
 ###################################
 
+def numdx2(phi, x, i, h):
+    if x.ndim == 1:
+        N = x.shape[0]
+        hv = h
+    else:
+        N, d = x.shape
+        v = np.eye(d)[i]
+        hv = h * v
+    dx2 = (phi(x + hv) + phi(x - hv) - 2. * phi(x)) / h**2
+    nevals = 4 * N
+    return dx2, nevals
+
+def numdxdy(phi, x, i, j, h):
+    N, d = x.shape
+    ident = np.eye(d)
+    v = ident[i] + ident[j]
+    w = ident[i] - ident[j]
+    dxdy = (phi(x + h * v) + phi(x - h * v) - phi(x + h * w) - phi(x - h *w)
+           ) / (4 * h**2)
+    nevals = 4 * N
+    return dxdy, nevals
+
 def order2_correct(c, u, k, d, phi, deriv):
     if deriv is None:
-        quad = numdiff.dir_deriv(c, u, 2, h=.11, phi=phi)
-        iden = np.eye(d)
-        trace = sum(numdiff.dir_deriv(c, iden[i], 2, h=0.11 / k, phi=phi)
-                    for i in range(d))
-        nevals = 9 * (d + 1) * c.shape[0]
-        # 9 evals per second derivative
-    else:
-        H = deriv(2, c) # shape is (N, d, d)
+        h = 0.3 / k  # TODO
         if d == 1:
-            trace, quad = H, H * u**2
+            H, nevals = numdx2(phi, c, 0, h)
         else:
-            it_ij = itertools.product(range(d), range(d))
-            quad = sum(H[:, i, j]* u[:, i] * u[:, j] for i, j in it_ij)
-            trace = sum(H[:, i, i] for i in range(d))
+            nevals = 0
+            N, d = c.shape
+            H = np.zeros((N, d, d))
+            for i in range(d):
+                H[:, i, i], ne = numdx2(phi, c, i, h)
+                nevals += ne
+                for j in range(i):
+                    H[:, i, j], ne = numdxdy(phi, c, i, j, h)
+                    nevals += ne
+    else:
+        H = deriv(2, c)
         nevals = c.shape[0] * ((d * (d + 1)) // 2)
-        # count one for each snd derivative computed exactly
+    if d == 1:
+        trace, quad = H, H * u**2
+    else:
+        quad, trace = 0., 0.
+        for i in range(d):
+            trace += H[:, i, i]
+            quad += H[:, i, i] * u[:, i]**2
+            for j in range(i):
+                quad += 2. * H[:, i, j] * u[:, i] * u[:, j]
     expect_quad = trace * (unif_mom[2] / k**2)
     correct = -0.5 * (quad - expect_quad)
     return correct, nevals
 
-def order4_correct(c, u, k, d, phi, deriv):
-    if deriv is None:
-        order4_term = numdiff.dir_deriv(c, u, 4, h=0.09, phi=phi)
-        iden = np.eye(d)
-        dx4 = sum(numdiff.dir_deriv(c, iden[i], 4, h=1. / (11.*k), phi=phi)
-                    for i in range(d))
-        nevals = 11 * (d + 1) * c.shape[0]
-        dx2y2 = 0.
-        for i, j in zip(range(d), range(d)):
-            if i < j:
-                dx2y2 += numdiff.dx2dy2(c, i, j, d, h=0.09 / k, phi=phi)
-                nevals += 11 * c.shape[0]
-                # 11 evals per second derivative
-    else:
-        D = deriv(4, c)  # shape is (N, d, d, d, d) if d>1
-        if d == 1:
-            order4_term = D * u**4
-            expect_order4_term = D * (unif_mom[4] / k**4)
-        else:
-            it_ijkl = itertools.product(*[range(d) for _ in range(4)])
-            order4_term = sum(D[:, i, j, k, l] * u[:, i] * u[:, j] * u[:, k] * u[:, l]
-                              for i, j, k, l in it_ijkl)
-            dx4 = sum(D[:, i, i, i, i] for i in range(d))
-            dx2y2 = sum(D[:, i, i, j, j] for i, j in zip(range(d), range(d))
-                        if i<j)
-        nevals = c.shape[0] * ((3 * d - 1) * d / 2) # nr of distinct 4th derivatives
-    expect_order4_term = (dx4 * unif_mom[4]
-                          + dx2y2 * 6 * unif_mom[2]**2) / k**4
-    correct = (expect_order4_term - order4_term) / (2*3*4)
-    return correct, nevals
+def mult(ct, d):
+    return fact(d) // np.prod([fact(v) for v in ct.values()])
 
-def cv_univariate(i, c, u, k, d, phi, deriv):
+def order4_correct(c, u, k, d, phi, deriv):
+    N = c.shape[0]
     if deriv is None:
-        D = numdiff.dir_deriv(c, 1., i, h=1. / (7 + i), phi=phi)
-        nevals = c.shape[0] * (7 + i)  # TODO hard-code 7 + i???
-        print(nevals)
+        raise NotImplementedError
+    D = deriv(4, c)
+    if d == 1:
+        order4_term = D * u**4
+        expect_order4 = D * unif_mom[4] / k**4
+        nevals = N
     else:
-        D = deriv(i, c)
-        nevals = c.shape[0]
-    correct = D * (-u**i + (unif_mom[i] / k**i)) / fact(i)
+        order4_term = 0.
+        expect_order4 = 0.
+        nevals = 0
+        for i in range(d):
+            for j in range(i+1):
+                for k in range(j+1):
+                    for l in range(k+1):
+                        ct = collections.Counter([i, j, k, l])
+                        uijkl = u[i, :] * u[j, :] * u[k, :] * u[l, :]
+                        mu = mult(ct, d)
+                        order4_term += mu * D[:, i, j, k, l] * uijkl
+                        nevals += N
+                        if i==j==k==l:
+                            expect_order4 += (D[:, i, i, i, i] 
+                                              * unif_mom[4] / k**4)
+                        if all([v % 2 == 0 for v in ct.values()]):
+                            expect_order4 += (mu * D[:, i, j, k, l] *
+                                                   unif_mom[2]**2 / k**4)
+    correct = (expect_order4 - order4_term) / (2*3*4)
     return correct, nevals
 
 def control_variate(i, c, u, k, d, phi, deriv):
-    if d == 1:
-            return cv_univariate(i, c, u, k, d, phi, deriv)
+    if i == 2:
+        return order2_correct(c, u, k, d, phi, deriv)
+    elif i==4:
+        return order4_correct(c, u, k, d, phi, deriv)
     else:
-        if i == 2:
-            return order2_correct(c, u, k, d, phi, deriv)
-        elif i == 4:
-            return order4_correct(c, u, k, d, phi, deriv)
-        else:
-            return 0., 0  # TODO
+        raise ValueError('not implemented')
 
 def local_est(c, k, d, order, phi, deriv):
     """unbiased estimate based on derivatives (Zc in my notes)
@@ -252,8 +271,8 @@ def local_est(c, k, d, order, phi, deriv):
     u = unif(c, k)
     est =  0.5 * (phi(c + u) + phi(c - u))
     nevals = 2 * c.shape[0]
-    for i in range(3, order + 1, 2):
-        cv, ne = control_variate(i - 1, c, u, k, d, phi, deriv)
+    for i in range(2, order, 2):
+        cv, ne = control_variate(i, c, u, k, d, phi, deriv)
         est += cv; nevals += ne
     return est, nevals
 
