@@ -4,10 +4,10 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat 
 
-import dick1D as pb
+import dick2D as pb
 
 all_deriv_meth = {'exact': None, 'num': pb.deriv}
-der = {k: all_deriv_meth[k] for k in pb.deriv_methods}
+deriv_meth = {k: all_deriv_meth[k] for k in pb.deriv_methods}
 
 results = []
 for order in pb.orders:
@@ -19,9 +19,10 @@ for order in pb.orders:
     karr = np.unique(np.round(np.exp(lkrange))).astype('int')
     ks = list(karr)
     print('order: %i, k=%r' % (order, ks))
+    der = {'exact': None} if order <=2 else deriv_meth 
     rez = multiplexer(f=strat.estimate, d=pb.d, k=ks, phi=pb.phi, 
                       order=[order], deriv=der,
-                      nruns=pb.nreps, nprocs=1)
+                      nruns=pb.nreps, nprocs=0)
     results += rez
 
 df = pd.DataFrame(results)

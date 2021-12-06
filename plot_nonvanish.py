@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-import dick1D as pb
+import dick2D as pb
 
 
 df = pd.read_pickle('results/%s.pkl' % pb.ident)

@@ -11,6 +11,7 @@ import functools
 import numpy as np
 from numpy import random
 from scipy import linalg
+from scipy.special import comb
 
 MAX_SIZE = 10**5
 INT_TYPE = np.int32  # SIGNED INT, YOU DIM-WIT!!!
@@ -179,7 +180,7 @@ def numdx2(phi, x, i, h):
         v = np.eye(d)[i]
         hv = h * v
     dx2 = (phi(x + hv) + phi(x - hv) - 2. * phi(x)) / h**2
-    nevals = 4 * N
+    nevals = 3 * N
     return dx2, nevals
 
 def numdxdy(phi, x, i, j, h):
@@ -191,6 +192,20 @@ def numdxdy(phi, x, i, j, h):
            ) / (4 * h**2)
     nevals = 4 * N
     return dxdy, nevals
+
+def numdx4(phi, x, i, h):
+    if x.ndim == 1:
+        N = x.shape[0]
+        hv = h
+    else:
+        N, d = x.shape
+        v = np.eye(d)[i]
+        hv = h * v
+    thv = 2. * hv
+    dx4 = (phi(x - thv) - 4 * phi(x - hv) +  6. * phi(x) - 4. * phi(x + hv) +
+           phi(x + thv)) / h**4
+    nevals = 5 * N
+    return dx4, nevals
 
 def order2_correct(c, u, k, d, phi, deriv):
     if deriv is None:
@@ -229,12 +244,18 @@ def mult(ct, d):
 def order4_correct(c, u, k, d, phi, deriv):
     N = c.shape[0]
     if deriv is None:
-        raise NotImplementedError
-    D = deriv(4, c)
+        h = 0.3 / k  # TODO
+        if d == 1:
+            D, nevals = numdx4(phi, c, 0, h)
+        else:
+            raise NotImplementedError
+    else:
+        D = deriv(4, c)
+        nevals = N * comb(d + 3, 4, exact=True)
+        # based on bijection i<=j<=k<=l <=> i<j+1<k+2<l+3
     if d == 1:
         order4_term = D * u**4
         expect_order4 = D * unif_mom[4] / k**4
-        nevals = N
     else:
         order4_term = 0.
         expect_order4 = 0.
@@ -247,7 +268,7 @@ def order4_correct(c, u, k, d, phi, deriv):
                         uijkl = u[i, :] * u[j, :] * u[k, :] * u[l, :]
                         mu = mult(ct, d)
                         order4_term += mu * D[:, i, j, k, l] * uijkl
-                        nevals += N
+                        # nevals += N
                         if i==j==k==l:
                             expect_order4 += (D[:, i, i, i, i] 
                                               * unif_mom[4] / k**4)

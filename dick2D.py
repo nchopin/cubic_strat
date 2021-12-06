@@ -10,7 +10,7 @@ min_neval = 20
 max_neval = 10**6
 nks = 10
 nreps = 50
-deriv_methods = ['exact']
+deriv_methods = ['exact', 'num']
 
 def xpy(u):
     return np.prod(u, axis=u.ndim - 1)
