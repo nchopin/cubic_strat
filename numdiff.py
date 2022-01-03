@@ -1,77 +1,76 @@
+"""
+Numerical derivatives with a twist:
 
-# Taken from Wikipedia: coefficients for O(h^8) numerical derivative of order 2
+* works for arrays;
+* compute all derivatives of order 2, 4 simultaneously;
+* accuracy is O(h^2).
 
-deriv_coeffs = {}
+"""
 
-deriv_coeffs[2] = {-4: -1/560, -3: 8/315, -2: -1/5, -1: 8/5, 
-                   0: -205/72, 1: 8/5, 2: -1/5, 3: 8/315, 4: -1/560}
+import numpy as np
 
-deriv_coeffs[4] = {
-    -5: -0.005423280423280352,
-    -4: 0.08339947089946993,
-    -3: -0.6440476190476121,
-    -2: 3.467460317460281,
-    -1: -9.272222222222187,
-    0: 12.741666666666717,
-    1: -9.272222222222323,
-    2: 3.4674603174603744,
-    3: -0.6440476190476302,
-    4: 0.08339947089947249,
-    5: -0.005423280423280538}
+def dx2(f, x, h):
+    der = (f(x + h) + f(x - h) - 2. * f(x)) / h**2
+    nevals = 3 * x.shape[0]
+    return der, nevals
 
-deriv_coeffs[6] = {
-    -6: -0.011491402116396317,
-    -5: 0.19206349206339682,
-    -4: -1.5500992063484338,
-    -3: 7.965608465604222,
-    -2: -25.18824404760001,
-    -1: 49.476190476111405,
-    0: -61.7680555554431,
-    1: 49.476190476135734,
-    2: -25.188244047614322,
-    3: 7.965608465606995,
-    4: -1.5500992063489303,
-    5: 0.1920634920634603,
-    6: -0.011491402116400401}
+def hessian(f, x, h):
+    def dv2(v):
+        return (f(x + v) + f(x - v) - tfx) / h**2
+    N, d = x.shape
+    hess = np.empty((N, d, d))
+    tfx = 2. * f(x)
+    iden = np.eye(d)
+    for i in range(d):
+        v = h * iden[i, :]
+        hess[:, i, i] = dv2(v)
+    for i in range(d):
+        for j in range(i):  # j<i
+            v = h * (iden[i, :] + iden[j, :])
+            hess[:, i, j] = 0.5 * (dv2(v) -hess[:, i, i] - hess[:, j, j])
+            hess[:, j, i] = hess[:, i, j]
+    nevals = N * (1 +  d * (d + 1))
+    return hess, nevals
 
-deriv_coeffs[8] = {
-    -7: -0.02056878306883161,
-    -6: 0.37407407407478294,
-    -5: -3.2384259259303967,
-    -4: 17.5037037037167,
-    -3: -62.5337962962762,
-    -2: 151.80370370324547,
-    -1: -255.9680555507601,
-    0: 304.1587301497311,
-    1: -255.9680555504124,
-    2: 151.80370370313918,
-    3: -62.533796296142555,
-    4: 17.50370370366318,
-    5: -3.2384259259177677,
-    6: 0.3740740740730166,
-    7: -0.020568783068717744}
+co = np.ones((3, 2))
+co[1, 0] = 2.
+co[2, 1] = 2. 
+Ainv = np.array([[10., -1., -1.], 
+                 [-6., 1., 0.5],
+                 [-6., 0.5, 1.]]) / 12.
 
-def dir_deriv(x, vec, k, h=0.01, phi=None):
-    """ Numerical snd derivative along a certain direction.
+def dx4(f, x, h):
+    deriv = (f(x + 2. * h) + f(x - 2. * h) - 4. * f(x + h) - 4. * f(x - h)
+             + 6. * f(x)) / h**4
+    nevals = 5 * x.shape[0]
+    return deriv, nevals
 
-    Approximates the k-th derivative of: 
-        t -> phi(x + t * vec)
-    where t is a scalar, and vec, x are in R^d, d>=2
-
-    """
-    der = sum(c * phi(x + o * h * vec) for o, c in deriv_coeffs[k].items())
-    return der / h**2
-
-def dx2dy2(x, i, j, d, h=0.01, phi=None):
-    """
-    Computes d^4 f / dx^2 dy^2 for function phi, where x/y=component i, j
-
-    """
-
-    hi = np.zeros(d); hi[i] = h  # directions
-    hj = np.zeros(d); hj[j] = h
-    s = (phi(x + hi + hj) + phi(x + hi - hj) 
-         + phi(x - hi + hj) + phi(x - hi - hj))
-    t = phi(x + hi) + phi(x - hi) + phi(x + hj) + phi(x - hj)
-    return (s - 2. * t + 4 * phi(x)) / h^4 
-
+def deriv4(f, x, h):
+    def dv4(v):
+        hv = h * v
+        return (1. / h**4) * (f(x + 2. * hv) + f(x - 2. * hv) 
+                              - 4. * f(x + hv) - 4. * f(x - hv) + sfx)
+    N, d = x.shape
+    if d != 2:
+        raise ValueError('deriv4: only dim=2 implemented')
+    D = np.empty((N, d, d, d, d))
+    sfx = 6. * f(x)
+    nevals = N
+    iden = np.eye(d)
+    for i in range(d):
+        D[:, i, i, i, i] = dv4(iden[i, :])
+        nevals += 4 * N
+    for i in range(d): 
+        for j in range(i):
+            dv = np.empty((N, 3))
+            for k in range(3):
+                v = co[k, 0] * iden[i, :] + co[k, 1] * iden[j, :]
+                dv[:, k] = (dv4(v) - co[k, 0]**4 * D[:, i, i, i, i] 
+                            - co[k, 1]**4 * D[:, j, j, j, j])
+                nevals += 4 * N
+                w = dv @ Ainv.T
+                D[:, i, i, j, j] = w[:, 0]
+                D[:, i, i, i, j] = w[:, 1]
+                D[:, i, j, j, j] = w[:, 2]
+    # TODO other derivatives 
+    return D, nevals

@@ -13,6 +13,8 @@ from numpy import random
 from scipy import linalg
 from scipy.special import comb
 
+import numdiff
+
 MAX_SIZE = 10**5
 INT_TYPE = np.int32  # SIGNED INT, YOU DIM-WIT!!!
 # int type for arrays of indices; to save some space we do not use uint64
@@ -171,57 +173,13 @@ def vanish_estimates(k=10, d=2, order=1, phi=None):
 # General (non-vanishing) functions
 ###################################
 
-def numdx2(phi, x, i, h):
-    if x.ndim == 1:
-        N = x.shape[0]
-        hv = h
-    else:
-        N, d = x.shape
-        v = np.eye(d)[i]
-        hv = h * v
-    dx2 = (phi(x + hv) + phi(x - hv) - 2. * phi(x)) / h**2
-    nevals = 3 * N
-    return dx2, nevals
-
-def numdxdy(phi, x, i, j, h):
-    N, d = x.shape
-    ident = np.eye(d)
-    v = ident[i] + ident[j]
-    w = ident[i] - ident[j]
-    dxdy = (phi(x + h * v) + phi(x - h * v) - phi(x + h * w) - phi(x - h *w)
-           ) / (4 * h**2)
-    nevals = 4 * N
-    return dxdy, nevals
-
-def numdx4(phi, x, i, h):
-    if x.ndim == 1:
-        N = x.shape[0]
-        hv = h
-    else:
-        N, d = x.shape
-        v = np.eye(d)[i]
-        hv = h * v
-    thv = 2. * hv
-    dx4 = (phi(x - thv) - 4 * phi(x - hv) +  6. * phi(x) - 4. * phi(x + hv) +
-           phi(x + thv)) / h**4
-    nevals = 5 * N
-    return dx4, nevals
-
 def order2_correct(c, u, k, d, phi, deriv):
     if deriv is None:
-        h = 0.3 / k  # TODO
+        h = 0.4 / k
         if d == 1:
-            H, nevals = numdx2(phi, c, 0, h)
+            H, nevals = numdiff.dx2(phi, c, h)
         else:
-            nevals = 0
-            N, d = c.shape
-            H = np.zeros((N, d, d))
-            for i in range(d):
-                H[:, i, i], ne = numdx2(phi, c, i, h)
-                nevals += ne
-                for j in range(i):
-                    H[:, i, j], ne = numdxdy(phi, c, i, j, h)
-                    nevals += ne
+            H, nevals = numdiff.hessian(phi, c, h)
     else:
         H = deriv(2, c)
         nevals = c.shape[0] * ((d * (d + 1)) // 2)
@@ -244,11 +202,11 @@ def mult(ct, d):
 def order4_correct(c, u, k, d, phi, deriv):
     N = c.shape[0]
     if deriv is None:
-        h = 0.3 / k  # TODO
+        h = 0.2 / k  # TODO
         if d == 1:
-            D, nevals = numdx4(phi, c, 0, h)
+            D, nevals = numdiff.dx4(phi, c, h)
         else:
-            raise NotImplementedError
+            D, nevals = numdiff.deriv4(phi, c, h)
     else:
         D = deriv(4, c)
         nevals = N * comb(d + 3, 4, exact=True)
@@ -260,20 +218,20 @@ def order4_correct(c, u, k, d, phi, deriv):
         order4_term = 0.
         expect_order4 = 0.
         nevals = 0
-        for i in range(d):
-            for j in range(i+1):
-                for k in range(j+1):
-                    for l in range(k+1):
-                        ct = collections.Counter([i, j, k, l])
-                        uijkl = u[i, :] * u[j, :] * u[k, :] * u[l, :]
-                        mu = mult(ct, d)
-                        order4_term += mu * D[:, i, j, k, l] * uijkl
+        for g in range(d):
+            for h in range(g+1):
+                for i in range(h+1):
+                    for j in range(i+1):
+                        ct = Counter([g, h, i, j])
+                        uijkl = u[:, g] * u[:, h] * u[:, i] * u[:, j]
+                        mu = mult(ct, 4)
+                        order4_term += mu * D[:, g, h, i, j] * uijkl
                         # nevals += N
-                        if i==j==k==l:
+                        if g==h==i==j:
                             expect_order4 += (D[:, i, i, i, i] 
                                               * unif_mom[4] / k**4)
                         if all([v % 2 == 0 for v in ct.values()]):
-                            expect_order4 += (mu * D[:, i, j, k, l] *
+                            expect_order4 += (mu * D[:, g, h, i, j] *
                                                    unif_mom[2]**2 / k**4)
     correct = (expect_order4 - order4_term) / (2*3*4)
     return correct, nevals

@@ -6,7 +6,8 @@ import strat
 
 import dick2D as pb
 
-all_deriv_meth = {'exact': None, 'num': pb.deriv}
+all_deriv_meth = {'num': None, 
+                  'exact': getattr(pb, 'deriv', None)}
 deriv_meth = {k: all_deriv_meth[k] for k in pb.deriv_methods}
 
 results = []
