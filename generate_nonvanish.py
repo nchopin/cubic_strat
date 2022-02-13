@@ -6,24 +6,18 @@ import strat
 
 import dick2D as pb
 
-all_deriv_meth = {'num': None, 
-                  'exact': getattr(pb, 'deriv', None)}
-deriv_meth = {k: all_deriv_meth[k] for k in pb.deriv_methods}
-
 results = []
 for order in pb.orders:
     # compute range of k such that nr of evaluations is between two bounds 
-    lkmin = (np.log(pb.min_neval / order)) / pb.d
-    lkmin = max(lkmin, np.log(2.)) # 1 not allowed
-    lkmax = (np.log(pb.max_neval / order)) / pb.d
+    lkmin = (np.log(pb.min_neval / min(3, order))) / pb.d
+    lkmin = max(lkmin, np.log(2.))  # 1 not allowed
+    lkmax = (np.log(pb.max_neval / min(3, order))) / pb.d
     lkrange = np.linspace(lkmin, lkmax, pb.nks)
     karr = np.unique(np.round(np.exp(lkrange))).astype('int')
     ks = list(karr)
     print('order: %i, k=%r' % (order, ks))
-    der = {'exact': None} if order <=2 else deriv_meth 
-    rez = multiplexer(f=strat.estimate, d=pb.d, k=ks, phi=pb.phi, 
-                      order=[order], deriv=der,
-                      nruns=pb.nreps, nprocs=0)
+    rez = multiplexer(f=strat.estimate_with_nevals, d=pb.d, k=ks, 
+                      phi=pb.phi, order=[order], nruns=pb.nreps, nprocs=0)
     results += rez
 
 df = pd.DataFrame(results)

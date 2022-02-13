@@ -8,6 +8,7 @@ from collections import Counter
 import itertools
 import functools
 
+from findiff import FinDiff
 import numpy as np
 from numpy import random
 from scipy import linalg
@@ -255,7 +256,7 @@ def local_est(c, k, d, order, phi, deriv):
         est += cv; nevals += ne
     return est, nevals
 
-def estimate(k, d, order=1, phi=None, deriv=None):
+def deprecated_estimate(k, d, order=1, phi=None, deriv=None):
     inner, outer = 0., 0.
     alphas = vander_system(order)
     m = (order - 1) // 2
@@ -302,6 +303,83 @@ def deriv(k, u):
         for i in range(d):
             D[:, i, i, i, i] = np.exp(u[:, i])
         return D
+
+def estimate(k, d, order=1, phi=None):
+    N = k ** d
+    h = 1. / k
+    hh = 0.5 * h # half h
+    gr = np.linspace(hh, 1. - hh, k)
+    lg = [gr] * d
+    mg = np.meshgrid(*lg, indexing='ij')
+    c = np.vstack([a.flatten() for a in mg]).T
+    u =  h * np.random.rand(N, d) - hh
+    est = np.mean(phi(c + u))
+    if order == 1:
+        return est
+    est = 0.5 * (est + np.mean(phi(c - u)))
+    if order == 2:
+        return est
+    fmg = np.reshape(phi(c), tuple([k] * d))
+    cv2 = 0.
+    a = order - 2
+    for i in range(d):
+        op = FinDiff(i, h, 2, acc=a)
+        dx2 = op(fmg).flatten()
+        cv2 += np.mean(dx2 * (u[:, i]**2 - h**2 * unif_mom[2]))
+        for j in range(i):
+            op = FinDiff((i, h), (j, h), acc=a)
+            dxdy = op(fmg).flatten()
+            cv2 += 2. * np.mean(dxdy * u[:, i] * u[:, j])
+    est = est - 0.5 * cv2
+    if order == 4:
+        return est
+    cv4 = 0.
+    a = order - 4
+    for i in range(d):
+        op = FinDiff(i, h, 4, acc=a)
+        dx4 = op(fmg).flatten()
+        cv4 += np.mean(dx4 * (u[:, i]**4 - h**4 * unif_mom[4]))
+        for j in range(i):
+            op = FinDiff((i, h, 3), (j, h, 1), acc=a)
+            dx3dy = op(fmg).flatten()
+            cv4 += 4. * np.mean(dx3dy * u[:, i]**3 * u[:, j])
+            op = FinDiff((i, h, 1), (j, h, 3), acc=a)
+            dxdy3 = op(fmg).flatten()
+            cv4 += 4. * np.mean(dxdy3 * u[:, i] * u[:, j]**3)
+            op = FinDiff((i, h, 2), (j, h, 2), acc=a)
+            dx2dy2 = op(fmg).flatten()
+            cv4 += 6. * np.mean(dx2dy2 * (u[:, i]**2 * u[:, j]**2 - h**4 * unif_mom[2]**2))
+            for k in range(j):
+                op = FinDiff((i, h, 2), (j, h, 1), (k, h, 1), acc=a)
+                dx2dydz = op(fmg).flatten()
+                cv4 += 12. * np.mean(dx2dydz * u[:, i]**2 * u[:, j] * u[:, k])
+                op = FinDiff((i, h, 1), (j, h, 2), (k, h, 1), acc=a)
+                dxdy2dz = op(fmg).flatten()
+                cv4 += 12. * np.mean(dxdy2dz * u[:, i] * u[:, j]**2 * u[:, k])
+                op = FinDiff((i, h, 1), (j, h, 1), (k, h, 2), acc=a)
+                dxdydz2 = op(fmg).flatten()
+                cv4 += 12. * np.mean(dxdydz2 * u[:, i] * u[:, j] * u[:, k]**2)
+                for l in range(k):
+                    op = FinDiff((i, h), (j, h), (k, h), (l, h), acc=a)
+                    dxdydzdt = op(fmg).flatten()
+                    cv4 += 24. * np.mean(dxdydzdt * u[:, i] * u[:, j] * u[:, k] * u[:, l])
+    est = est - cv4 / 24.
+    return est
+
+def estimate_with_nevals(k, d, order=1, phi=None):
+    est = estimate(k, d, order=order, phi=phi)
+    nevals = k**d * min(order, 3)
+    return {'est': est, 'nevals': nevals}
+
+def diff_cv(ns, fmg, u, h, a):
+    # TODO
+    lns = [(i, h, k) for i, k in ns]
+    op = FinDiff(*lns, acc=a)
+    deriv = op(fmg).flatten()
+    for i, k in ns:
+        deriv *= u[:, i]**k
+    return np.mean(deriv)
+
 
 if __name__ == '__main__':
     out = estimate(100, 2, order=6, phi=phi, deriv=None)

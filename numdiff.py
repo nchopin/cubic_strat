@@ -14,22 +14,29 @@ def dx2(f, x, h):
     nevals = 3 * x.shape[0]
     return der, nevals
 
-def hessian(f, x, h):
+def hessian(f, x, h, acc=2):
     def dv2(v):
-        return (f(x + v) + f(x - v) - tfx) / h**2
+        hv = h * v
+        if acc==2:
+            return (f(x + hv) + f(x - hv) - tfx) / h**2
+        elif acc==4:
+            return ((-1./12.) * (f(x + 2. * hv) + f(x - 2. * hv))
+                    + (4./3.) * (f(x + hv) + f(x - hv)) - 2.5 * tfx) / h**2
+        else:
+            raise NotImplementedError('hessian requires acc=2 or 4')
     N, d = x.shape
     hess = np.empty((N, d, d))
     tfx = 2. * f(x)
     iden = np.eye(d)
     for i in range(d):
-        v = h * iden[i, :]
-        hess[:, i, i] = dv2(v)
+        hess[:, i, i] = dv2(iden[i, :])
     for i in range(d):
         for j in range(i):  # j<i
-            v = h * (iden[i, :] + iden[j, :])
+            v = iden[i, :] + iden[j, :]
             hess[:, i, j] = 0.5 * (dv2(v) -hess[:, i, i] - hess[:, j, j])
             hess[:, j, i] = hess[:, i, j]
-    nevals = N * (1 +  d * (d + 1))
+    nev = 1 if acc==2 else 2
+    nevals = N * (1 + nev * d * (d + 1)) 
     return hess, nevals
 
 co = np.ones((3, 2))

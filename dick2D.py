@@ -5,8 +5,8 @@ d = 2
 title_plot = r'$\varphi(x, y) = y  e^{xy}$'
 mat_file_name = 'Mathieu/f4_d2_a%i.csv'
 true_val = np.exp(1.) - 2.
-orders = [1, 2, 3, 4, 5, 6]
-min_neval = 20
+orders = [1, 2, 4, 6]
+min_neval = 3 * 7**2
 max_neval = 10**6
 nks = 10
 nreps = 50

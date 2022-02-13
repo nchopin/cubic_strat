@@ -3,14 +3,13 @@ import pandas as pd
 
 import dick2D as pb
 
-
 df = pd.read_pickle('results/%s.pkl' % pb.ident)
 if 'rmse' in df:
-    dfm = df.groupby(['k', 'order', 'deriv']).mean().reset_index()
+    dfm = df.groupby(['k', 'order']).mean().reset_index()
     key = 'rmse'
 else:
-    dfm = df.groupby(['k', 'order', 'deriv']).mean().reset_index()
-    dfv = df.groupby(['k', 'order', 'deriv']).var().reset_index()
+    dfm = df.groupby(['k', 'order']).mean().reset_index()
+    dfv = df.groupby(['k', 'order']).var().reset_index()
     grand_mean = dfm['est'].mean()
     dfm['var'] = dfv['est'] / grand_mean**2
     key = 'var'
@@ -44,20 +43,16 @@ plt.style.use('ggplot')
 #           '#bcbd22',
 #           '#17becf']
 colors = [None, 'r', 'b', 'm', 'k', 'c', 'y', 'g', 'pink', 'gray', 'orange']
-fmts = {'exact': '-', 'num': '--', 'dick': ':'}
 
 fig, ax = plt.subplots()
 min_order, max_order = dfm['order'].min(), dfm['order'].max()
 for order in range(min_order, max_order + 1):
     col = colors[order]
-    for der in ['exact', 'num']:
-        dfo = dfm[(dfm['order'] == order) & (dfm['deriv'] == der)]
-        if not(dfo.empty):
-            label = 'order=%i' % order
-            if der == 'num':
-                label += ' (num)'
-            ax.plot(dfo['nevals'], dfo['rmse'], fmts[der], alpha=0.7, lw=4,
-                    color=colors[order], label=label)
+    dfo = dfm[(dfm['order'] == order)]
+    if not(dfo.empty):
+        label = 'order=%i' % order
+        ax.plot(dfo['nevals'], dfo['rmse'], alpha=0.7, lw=4,
+                color=colors[order], label=label)
 plt.title(pb.title_plot)
 plt.xlabel('nr evaluations')
 plt.ylabel(key)
@@ -65,9 +60,9 @@ plt.xscale('log')
 plt.yscale('log')
 if dfs_mat:
     for a in dick_alphas:
-        df = dfs_mat[a]
-        plt.plot(df['N'], df['var'], fmts['dick'], color=colors[a], 
-                 label='dick alpha=%i' % a)
+        dfd = dfs_mat[a]
+        plt.plot(dfd['N'], dfd['var'], ':', color=colors[a], 
+                 label='Dick alpha=%i' % a)
 
 plt.legend()
 plt.savefig('plots/%s_var_vs_N.pdf' % pb.ident)
