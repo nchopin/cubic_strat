@@ -14,18 +14,17 @@ else:
     dfm['var'] = dfv['est'] / grand_mean**2
     key = 'var'
 
-machine_eps = 2.2e-16
+machine_eps = 5.e-16
 dfm = dfm[dfm[key] > machine_eps**2]
 
-if hasattr(pb, 'mat_file_name'):
-    dick_alphas = [1, 2, 3]
-    dfs_mat = {a: pd.read_csv(pb.mat_file_name % a) for a in dick_alphas}
-    for a, dfa in dfs_mat.items():
-        dfa['var'] = dfa['var'] / pb.true_val**2 
-        dfs_mat[a] = dfa[dfa['var'] > machine_eps**2]
-    # TODO document
-else:
-    dfs_mat = None
+dfds = {}
+if hasattr(pb, 'mat_folder'):
+    for a in [1, 2, 3]:
+        with open('%s/Dick_alpha%i.text' %(pb.mat_folder, a), 'r') as f:
+            dfd = pd.read_csv(f, sep=' ', names=['k', 'mse'], header=0)
+            dfd['N'] = 2**dfd['k']
+            dfd = dfd[dfd['N'] > pb.min_neval]
+            dfds[a] = dfd
 
 # plots
 #######
@@ -58,11 +57,9 @@ plt.xlabel('nr evaluations')
 plt.ylabel(key)
 plt.xscale('log')
 plt.yscale('log')
-if dfs_mat:
-    for a in dick_alphas:
-        dfd = dfs_mat[a]
-        plt.plot(dfd['N'], dfd['var'], ':', color=colors[a], 
-                 label='Dick alpha=%i' % a)
+for a, dfd in dfds.items():
+    plt.plot(dfd['N'], dfd['mse'], ':', color=colors[a], 
+             label='Dick alpha=%i' % a)
 
 plt.legend()
 plt.savefig('plots/%s_var_vs_N.pdf' % pb.ident)

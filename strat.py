@@ -229,7 +229,7 @@ def order4_correct(c, u, k, d, phi, deriv):
                         order4_term += mu * D[:, g, h, i, j] * uijkl
                         # nevals += N
                         if g==h==i==j:
-                            expect_order4 += (D[:, i, i, i, i] 
+                            expect_order4 += (D[:, i, i, i, i]
                                               * unif_mom[4] / k**4)
                         if all([v % 2 == 0 for v in ct.values()]):
                             expect_order4 += (mu * D[:, g, h, i, j] *
@@ -285,7 +285,7 @@ def deprecated_estimate(k, d, order=1, phi=None, deriv=None):
             outer += np.sum(coeffs * le)
             nevals += nev
     est = (outer + inner) / k**d
-    return {'est': est, 'inner_term': inner, 'outer_term': outer, 
+    return {'est': est, 'inner_term': inner, 'outer_term': outer,
             'nevals': nevals}
 
 def phi(u):
