@@ -4,7 +4,7 @@ Nested stratified estimators.
 
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 import itertools
 import functools
 
@@ -15,6 +15,12 @@ from scipy import linalg
 from scipy.special import comb
 
 import numdiff
+
+class StratError(Exception):
+    pass
+
+class TooSmallkError(StratError):
+    pass
 
 MAX_SIZE = 10**5
 INT_TYPE = np.int32  # SIGNED INT, YOU DIM-WIT!!!
@@ -243,7 +249,7 @@ def control_variate(i, c, u, k, d, phi, deriv):
     elif i==4:
         return order4_correct(c, u, k, d, phi, deriv)
     else:
-        raise ValueError('not implemented')
+        raise NotImplementedError()
 
 def local_est(c, k, d, order, phi, deriv):
     """unbiased estimate based on derivatives (Zc in my notes)
@@ -304,6 +310,29 @@ def deriv(k, u):
             D[:, i, i, i, i] = np.exp(u[:, i])
         return D
 
+################################
+### New (non-vanishing) estimate
+
+class cv_generator:
+    def __init__(self, u, fc, h):
+        self.u = u
+        self.fc = fc
+        self.h = h
+
+    def cv(self, *ns, acc=2):
+        lns = [(i, self.h, k) for i, k in ns]
+        op = FinDiff(*lns, acc=acc)
+        deriv = op(self.fc).flatten()
+        pu, avg = 1., 1.
+        all_even = all(k % 2 == 0 for i, k in ns)
+        for i, k in ns:
+            pu = pu * self.u[:, i]**k
+            if all_even:
+                avg = avg * self.h**k * unif_mom[k]
+        if not(all_even):
+            avg = 0.
+        return np.mean(deriv * (pu - avg))
+
 def estimate(k, d, order=1, phi=None):
     N = k ** d
     h = 1. / k
@@ -319,66 +348,73 @@ def estimate(k, d, order=1, phi=None):
     est = 0.5 * (est + np.mean(phi(c - u)))
     if order == 2:
         return est
+    if k < (3 * order) // 2 - 1:
+        raise TooSmallkError('k must be at least (3/2) * order - 1')
     fmg = np.reshape(phi(c), tuple([k] * d))
-    cv2 = 0.
+    cvgen =  cv_generator(u, fmg, h)
+    cvs = defaultdict(float)  # default to 0. 
     a = order - 2
     for i in range(d):
-        op = FinDiff(i, h, 2, acc=a)
-        dx2 = op(fmg).flatten()
-        cv2 += np.mean(dx2 * (u[:, i]**2 - h**2 * unif_mom[2]))
+        cvs[2] += cvgen.cv((i, 2), acc=a)
         for j in range(i):
-            op = FinDiff((i, h), (j, h), acc=a)
-            dxdy = op(fmg).flatten()
-            cv2 += 2. * np.mean(dxdy * u[:, i] * u[:, j])
-    est = est - 0.5 * cv2
+            cvs[2] += 2. * cvgen.cv((i, 1), (j, 1), acc=a)
+    est = est - 0.5 * cvs[2]
     if order == 4:
         return est
-    cv4 = 0.
     a = order - 4
     for i in range(d):
-        op = FinDiff(i, h, 4, acc=a)
-        dx4 = op(fmg).flatten()
-        cv4 += np.mean(dx4 * (u[:, i]**4 - h**4 * unif_mom[4]))
+        cvs[4] += cvgen.cv((i, 4), acc=a)
         for j in range(i):
-            op = FinDiff((i, h, 3), (j, h, 1), acc=a)
-            dx3dy = op(fmg).flatten()
-            cv4 += 4. * np.mean(dx3dy * u[:, i]**3 * u[:, j])
-            op = FinDiff((i, h, 1), (j, h, 3), acc=a)
-            dxdy3 = op(fmg).flatten()
-            cv4 += 4. * np.mean(dxdy3 * u[:, i] * u[:, j]**3)
-            op = FinDiff((i, h, 2), (j, h, 2), acc=a)
-            dx2dy2 = op(fmg).flatten()
-            cv4 += 6. * np.mean(dx2dy2 * (u[:, i]**2 * u[:, j]**2 - h**4 * unif_mom[2]**2))
+            cvs[4] += 4. * cvgen.cv((i, 3), (j, 1), acc=a)
+            cvs[4] += 4. * cvgen.cv((i, 1), (j, 3), acc=a)
+            cvs[4] += 6. * cvgen.cv((i, 2), (j, 2), acc=a)
             for k in range(j):
-                op = FinDiff((i, h, 2), (j, h, 1), (k, h, 1), acc=a)
-                dx2dydz = op(fmg).flatten()
-                cv4 += 12. * np.mean(dx2dydz * u[:, i]**2 * u[:, j] * u[:, k])
-                op = FinDiff((i, h, 1), (j, h, 2), (k, h, 1), acc=a)
-                dxdy2dz = op(fmg).flatten()
-                cv4 += 12. * np.mean(dxdy2dz * u[:, i] * u[:, j]**2 * u[:, k])
-                op = FinDiff((i, h, 1), (j, h, 1), (k, h, 2), acc=a)
-                dxdydz2 = op(fmg).flatten()
-                cv4 += 12. * np.mean(dxdydz2 * u[:, i] * u[:, j] * u[:, k]**2)
+                cvs[4] += 12. * cvgen.cv((i, 2), (j, 1), (k, 1), acc=a)
+                cvs[4] += 12. * cvgen.cv((i, 1), (j, 2), (k, 1), acc=a)
+                cvs[4] += 12. * cvgen.cv((i, 1), (j, 1), (k, 2), acc=a)
                 for l in range(k):
-                    op = FinDiff((i, h), (j, h), (k, h), (l, h), acc=a)
-                    dxdydzdt = op(fmg).flatten()
-                    cv4 += 24. * np.mean(dxdydzdt * u[:, i] * u[:, j] * u[:, k] * u[:, l])
-    est = est - cv4 / 24.
+                    cvs[4] += 24. * cvgen.cv((i, 1), (j, 1), (k, 1), (l, 1),
+                                             acc=a)
+    est = est - cvs[4] / 24.
+    if order == 6:
+        return est
+    a = order - 6
+    for i in range(d):
+        cvs[6] += cvgen.cv((i, 6), acc=a)
+        for j in range(i):
+            cvs[6] += 6. * cvgen.cv((i, 5), (j, 1), acc=a)
+            cvs[6] += 6. * cvgen.cv((i, 1), (j, 5), acc=a)
+            cvs[6] += 15. * cvgen.cv((i, 4), (j, 2), acc=a)
+            cvs[6] += 15. * cvgen.cv((i, 2), (j, 4), acc=a)
+            cvs[6] += 20. * cvgen.cv((i, 3), (j, 3), acc=a)
+            for k in range(j):
+                raise NotImplementedError('Order 8 not implemented for dim>2')
+    est = est - cvs[6] / fact(6)
+    if order == 8:
+        return est
+    a = order - 8
+    for i in range(d):
+        cvs[8] += cvgen.cv((i, 8), acc=a)
+        for j in range(i):
+            cvs[8] += 8. * cvgen.cv((i, 7), (j, 1), acc=a)
+            cvs[8] += 8. * cvgen.cv((i, 7), (j, 1), acc=a)
+            cvs[8] += 28. * cvgen.cv((i, 6), (j, 2), acc=a)
+            cvs[8] += 28. * cvgen.cv((i, 2), (j, 6), acc=a)
+            cvs[8] += 56. * cvgen.cv((i, 5), (j, 3), acc=a)
+            cvs[8] += 56. * cvgen.cv((i, 3), (j, 5), acc=a)
+            cvs[8] += 70. * cvgen.cv((i, 4), (j, 4), acc=a)
+            for k in range(j):
+                raise NotImplementedError('Order 10 not implemented for dim>2')
+    est = est - cvs[8] / fact(8)
     return est
 
 def estimate_with_nevals(k, d, order=1, phi=None):
-    est = estimate(k, d, order=order, phi=phi)
+    try:
+        est = estimate(k, d, order=order, phi=phi)
+    except TooSmallkError:
+        est = None
     nevals = k**d * min(order, 3)
     return {'est': est, 'nevals': nevals}
-
-def diff_cv(ns, fmg, u, h, a):
-    # TODO
-    lns = [(i, h, k) for i, k in ns]
-    op = FinDiff(*lns, acc=a)
-    deriv = op(fmg).flatten()
-    for i, k in ns:
-        deriv *= u[:, i]**k
-    return np.mean(deriv)
 
 
 if __name__ == '__main__':

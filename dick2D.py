@@ -5,10 +5,10 @@ d = 2
 title_plot = r'$\varphi(x, y) = y  e^{xy}$'
 mat_folder = 'simuDick/d2'
 true_val = np.exp(1.) - 2.
-orders = [1, 2, 4, 6]
-min_neval = 3 * 7**2
+orders = [1, 2, 4, 6, 8, 10]
+min_neval = 10
 max_neval = 10**6
-nks = 10
+nks = 25
 nreps = 50
 deriv_methods = ['exact', 'num']
 

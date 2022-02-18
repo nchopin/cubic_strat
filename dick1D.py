@@ -3,13 +3,13 @@ import numpy as np
 ident = 'dick1D'
 d = 1
 title_plot = r'$\varphi(x) = x e^x$'
-mat_file_name = 'Mathieu/f3_d1_a%i.csv'
+mat_folder = 'simuDick/d1/'
 true_val = 1.
-min_neval = 10
-max_neval = 5 * 10**5
-orders = [1, 2, 3, 4, 5, 6]
-nreps = 500
-nks = 30
+min_neval = 9
+max_neval = 10**6
+orders = [1, 2, 4, 6, 8, 10]
+nreps = 50
+nks = 20
 save_file = 'results/dick1D.pkl'
 deriv_methods = ['exact', 'num']
 
