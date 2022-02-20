@@ -4,7 +4,7 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat 
 
-import dick4D as pb
+import dick2D as pb
 
 results = []
 for order in pb.orders:

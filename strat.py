@@ -5,7 +5,7 @@ Nested stratified estimators.
 """
 
 from collections import Counter, defaultdict
-import itertools
+import itertools as itt
 import functools
 
 from findiff import FinDiff
@@ -28,10 +28,18 @@ INT_TYPE = np.int32  # SIGNED INT, YOU DIM-WIT!!!
 
 pos_lambdas = list(range(1, 30, 2))  # 1, 3, 5, ...
 lambdas_nested = [(i, -i) for i in pos_lambdas]
-lambdas = list(itertools.chain(*lambdas_nested))  # 1, -1, 3, -3, ...
+lambdas = list(itt.chain(*lambdas_nested))  # 1, -1, 3, -3, ...
 
 # moments of Unif[-1/2, 1/2]
 unif_mom = {k: 1. / (2**k * (k + 1)) for k in range(2, 11, 2)}
+
+def cycles(*l):
+    """List of all the circular shifts of a given list.
+
+    > cycles(1, 2, 3)
+    [[1, 2, 3], [3, 1, 2], [2, 3, 1]]
+    """
+    return [list(np.roll(l, k)) for k in range(len(l))]
 
 def fact(k):
     """Factorial of k for k > 1.
@@ -350,6 +358,8 @@ def estimate(k, d, order=1, phi=None):
         return est
     if k < (3 * order) // 2 - 1:
         raise TooSmallkError('k must be at least (3/2) * order - 1')
+    if order % 2 != 0:
+        raise NotImplementedError('Order must be even (or 1)')
     fmg = np.reshape(phi(c), tuple([k] * d))
     cvgen =  cv_generator(u, fmg, h)
     cvs = defaultdict(float)  # default to 0. 
@@ -369,9 +379,8 @@ def estimate(k, d, order=1, phi=None):
             cvs[4] += 4. * cvgen.cv((i, 1), (j, 3), acc=a)
             cvs[4] += 6. * cvgen.cv((i, 2), (j, 2), acc=a)
             for k in range(j):
-                cvs[4] += 12. * cvgen.cv((i, 2), (j, 1), (k, 1), acc=a)
-                cvs[4] += 12. * cvgen.cv((i, 1), (j, 2), (k, 1), acc=a)
-                cvs[4] += 12. * cvgen.cv((i, 1), (j, 1), (k, 2), acc=a)
+                for s, t, u in cycles(i, j, k):
+                    cvs[4] += 12. * cvgen.cv((s, 2), (t, 1), (u, 1), acc=a)
                 for l in range(k):
                     cvs[4] += 24. * cvgen.cv((i, 1), (j, 1), (k, 1), (l, 1),
                                              acc=a)
@@ -382,13 +391,31 @@ def estimate(k, d, order=1, phi=None):
     for i in range(d):
         cvs[6] += cvgen.cv((i, 6), acc=a)
         for j in range(i):
-            cvs[6] += 6. * cvgen.cv((i, 5), (j, 1), acc=a)
-            cvs[6] += 6. * cvgen.cv((i, 1), (j, 5), acc=a)
-            cvs[6] += 15. * cvgen.cv((i, 4), (j, 2), acc=a)
-            cvs[6] += 15. * cvgen.cv((i, 2), (j, 4), acc=a)
+            for s, t in cycles(i, j):
+                cvs[6] += 6. * cvgen.cv((s, 5), (t, 1), acc=a)
+                cvs[6] += 15. * cvgen.cv((s, 4), (t, 2), acc=a)
             cvs[6] += 20. * cvgen.cv((i, 3), (j, 3), acc=a)
             for k in range(j):
-                raise NotImplementedError('Order 8 not implemented for dim>2')
+                for s, t, u in cycles(i, j, k):
+                    cvs[6] += 30. * cvgen.cv((s, 4), (t, 1), (u, 1))
+                for s, t, u in itt.permutations([i, j, k]):
+                    cvs[6] += 60. * cvgen.cv((s, 3), (t, 2), (u, 1))
+                cvs[6] += 90. * cvgen.cv((i, 2), (j, 2), (k, 2), acc=a)
+                for l in range(k):
+                    for s, t, u, v in cycles(i, j, k, l):
+                        cvs[6] += 120. * cvgen.cv((s, 3), (t, 1), (u, 1), 
+                                                  (v, 1), acc=a)
+                    for s, t, u, v in [(i, j, k, l), (i, k, j, l), (i, l, k, j),
+                                       (j, k, i, l), (j, l, i, k), (k, l, i, j)]:
+                        cvs[6] += 180. * cvgen.cv((s, 2), (t, 2), (u, 1), (v, 1))
+                    for m in range(l):
+                        for s, t, u, v, w in cycles(i, j, k, l, m):
+                            cvs[6] += 360. * cvgen.cv((s, 2), (t, 1), (u, 1), (v, 1),
+                                                      (w, 1), acc=a)
+                        for n in range(m):
+                            cvs[6] += fact(6) * cvgen.cv((i, 1), (j, 1), (k, 1), 
+                                                         (l, 1), (m, 1), (n, 1),
+                                                        acc=a)
     est = est - cvs[6] / fact(6)
     if order == 8:
         return est
@@ -396,17 +423,18 @@ def estimate(k, d, order=1, phi=None):
     for i in range(d):
         cvs[8] += cvgen.cv((i, 8), acc=a)
         for j in range(i):
-            cvs[8] += 8. * cvgen.cv((i, 7), (j, 1), acc=a)
-            cvs[8] += 8. * cvgen.cv((i, 7), (j, 1), acc=a)
-            cvs[8] += 28. * cvgen.cv((i, 6), (j, 2), acc=a)
-            cvs[8] += 28. * cvgen.cv((i, 2), (j, 6), acc=a)
-            cvs[8] += 56. * cvgen.cv((i, 5), (j, 3), acc=a)
-            cvs[8] += 56. * cvgen.cv((i, 3), (j, 5), acc=a)
+            for s, t in cycles(i, j):
+                cvs[8] += 8. * cvgen.cv((s, 7), (t, 1), acc=a)
+                cvs[8] += 28. * cvgen.cv((s, 6), (t, 2), acc=a)
+                cvs[8] += 56. * cvgen.cv((s, 5), (t, 3), acc=a)
             cvs[8] += 70. * cvgen.cv((i, 4), (j, 4), acc=a)
             for k in range(j):
                 raise NotImplementedError('Order 10 not implemented for dim>2')
     est = est - cvs[8] / fact(8)
-    return est
+    if order == 10:
+        return est
+    else:
+        raise NotImplementedError('Orders above 10 not implemented')
 
 def estimate_with_nevals(k, d, order=1, phi=None):
     try:
