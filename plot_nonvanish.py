@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-import dick2D as pb
+import nvpima4 as pb
 
 df = pd.read_pickle('results/%s.pkl' % pb.ident)
 if 'rmse' in df:
@@ -20,7 +20,7 @@ dfm = dfm[dfm[key] > machine_eps**2]
 dfds = {}
 if hasattr(pb, 'mat_folder'):
     for a in [1, 2, 3]:
-        with open('%s/Dick_alpha%i.text' %(pb.mat_folder, a), 'r') as f:
+        with open('%s/Dick_alpha%i.txt' %(pb.mat_folder, a), 'r') as f:
             dfd = pd.read_csv(f, sep=' ', names=['k', 'mse'], header=0)
             dfd['N'] = 2**dfd['k']
             dfd = dfd[dfd['N'] >= dfm['nevals'].min()]
@@ -50,7 +50,7 @@ for order in range(min_order, max_order + 1):
     col = colors[order]
     dfo = dfm[(dfm['order'] == order)]
     if not(dfo.empty):
-        line, = ax.plot(dfo['nevals'], dfo['rmse'], alpha=0.7, lw=4,
+        line, = ax.plot(dfo['nevals'], dfo[key], alpha=0.7, lw=4,
                         color=colors[order])
         lines.append(line)
         k = dfo['nevals'].argmax()

@@ -4,13 +4,14 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat 
 
-import dick2D as pb
+import nvpima4 as pb
 
 results = []
 for order in pb.orders:
     # compute range of k such that nr of evaluations is between two bounds 
     lkmin = (np.log(pb.min_neval / min(3, order))) / pb.d
-    lkmin = max(lkmin, np.log(2.))  # 1 not allowed
+    ko = 2 if order <= 2 else (3 * order // 2 - 1)
+    lkmin = max(lkmin, np.log(ko))  # ko = min value of k allowed by method
     lkmax = (np.log(pb.max_neval / min(3, order))) / pb.d
     lkrange = np.linspace(lkmin, lkmax, pb.nks)
     karr = np.unique(np.round(np.exp(lkrange))).astype('int')
