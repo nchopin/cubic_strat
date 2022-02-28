@@ -8,7 +8,7 @@ true_val = np.exp(1.) - 2.
 orders = [1, 2, 4, 6, 8, 10]
 min_neval = 1
 max_neval = 10**6
-nks = 25
+nks = 20
 nreps = 50
 deriv_methods = ['exact', 'num']
 

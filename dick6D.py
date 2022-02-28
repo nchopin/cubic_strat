@@ -10,7 +10,7 @@ orders = [1, 2, 4, 6, 8]
 min_neval = 100
 max_neval = 2 * 10**7
 nks = 20
-nreps = 20
+nreps = 50
 
 def phi(u):
     pu = 1.

@@ -5,18 +5,20 @@ d = 2
 tau = 1.
 scale = 1.5
 ident = 'pima'
+# max_nevals = 10**5  # TODO
 
 file_name = '%s%i-tau%.1f-scale%.1f' % (ident, d, tau, scale)
 df = pd.read_pickle('results/%s.pkl' % file_name)
-if 'rmse' in df:
+# df = df[df['nevals'] <= max_nevals]
+if 'rel-mse' in df:
     dfm = df.groupby(['k', 'order']).mean().reset_index()
-    key = 'mse'
+    key = 'rel-mse'
 else:
     dfm = df.groupby(['k', 'order']).mean().reset_index()
     dfv = df.groupby(['k', 'order']).var().reset_index()
     grand_mean = dfm['est'].mean()
-    dfm['var'] = dfv['est'] / grand_mean**2
-    key = 'var'
+    dfm['rel-var'] = dfv['est'] / grand_mean**2
+    key = 'rel-var'
 
 # plots
 #######
@@ -39,9 +41,9 @@ min_order, max_order = dfm['order'].min(), dfm['order'].max()
 for o in range(min_order, max_order + 1):
     col = colors[o]
     dfo = dfm[dfm['order']==o]
-    ax.plot(dfo['neval'], dfo[key], col, lw=3, alpha=0.8)
-    k = dfo['neval'].argmax()
-    x = dfo['neval'].to_numpy()[k] * 1.2
+    ax.plot(dfo['nevals'], dfo[key], col, lw=3, alpha=0.8)
+    k = dfo['nevals'].argmax()
+    x = dfo['nevals'].to_numpy()[k] * 1.2
     y = dfo[key].to_numpy()[k]
     ax.text(x, y, '%i' % o, va='top', ma='left', color=col)
 plt.title(r'%s $s=%i$' % (ident.capitalize(), d))

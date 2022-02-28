@@ -1,30 +1,33 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-import nvpima4 as pb
+import nvpima2 as pb
 
 df = pd.read_pickle('results/%s.pkl' % pb.ident)
-if 'rmse' in df:
+if 'rel-mse' in df:
     dfm = df.groupby(['k', 'order']).mean().reset_index()
-    key = 'rmse'
+    key = 'rel-mse'
 else:
     dfm = df.groupby(['k', 'order']).mean().reset_index()
     dfv = df.groupby(['k', 'order']).var().reset_index()
     grand_mean = dfm['est'].mean()
-    dfm['var'] = dfv['est'] / grand_mean**2
-    key = 'var'
+    dfm['rel-var'] = dfv['est'] / grand_mean**2
+    key = 'rel-var'
 
-machine_eps = 1.2e-15
+machine_eps = 3.2e-16
 dfm = dfm[dfm[key] > machine_eps**2]
 
 dfds = {}
 if hasattr(pb, 'mat_folder'):
-    for a in [1, 2, 3]:
-        with open('%s/Dick_alpha%i.txt' %(pb.mat_folder, a), 'r') as f:
-            dfd = pd.read_csv(f, sep=' ', names=['k', 'mse'], header=0)
-            dfd['N'] = 2**dfd['k']
-            dfd = dfd[dfd['N'] >= dfm['nevals'].min()]
-            dfds[a] = dfd
+    for a in range(1, 5):
+        try:
+            with open('%s/Dick_alpha%i.txt' %(pb.mat_folder, a), 'r') as f:
+                dfd = pd.read_csv(f, sep=' ', names=['k', 'mse'], header=0)
+                dfd['N'] = 2**dfd['k']
+                dfd = dfd[dfd['N'] >= dfm['nevals'].min()]
+                dfds[a] = dfd
+        except FileNotFoundError:
+            print('Warning: no data for Dick est with alpha=%i' % a)
 
 # plots
 #######

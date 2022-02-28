@@ -21,12 +21,12 @@ mp_results = multiplexer(f=strat.vanish_estimates, k=ks, d=pb.d, phi=pb.phi,
 
 results = []
 for r in mp_results:
-    ests, nevals = r['output']
     for i in range(pb.max_order):
-        dr = {'est': ests[i], 'order': i + 1, 'neval': nevals[i], 'k': r['k']}
+        dr = {'est': r['estimates'][i], 'order': i + 1, 
+              'nevals': r['nevals'][i], 'k': r['k'], 'cpu': r['cpu']}
         results.append(dr)
 
 df = pd.DataFrame(results)
 if hasattr(pb, 'true_val'):
-    df['rmse'] = (df['est'] / pb.true_val - 1.)**2
+    df['rel-mse'] = (df['est'] / pb.true_val - 1.)**2
 df.to_pickle('results/%s.pkl' % pb.ident)

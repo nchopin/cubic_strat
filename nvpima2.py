@@ -9,7 +9,7 @@ orders = [1, 2, 4, 6, 8, 10]
 nks = 10
 nreps = 50
 ident = 'nvpima%i-tau%.1f-scale%.1f' % (d, tau, scale_prop)
-title_plot = 'pima s=%i' % d
+title_plot = r'Pima $s=%i$' % d
 
 def phi(u):
     return pim.phi(u, tau=tau, scale_prop=scale_prop)

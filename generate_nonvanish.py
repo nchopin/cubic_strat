@@ -4,7 +4,7 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat 
 
-import nvpima4 as pb
+import nvpima2 as pb
 
 results = []
 for order in pb.orders:
@@ -23,5 +23,5 @@ for order in pb.orders:
 
 df = pd.DataFrame(results)
 if hasattr(pb, 'true_val'):
-    df['rmse'] = (df['est'] / pb.true_val - 1.)**2
+    df['rel-mse'] = (df['est'] / pb.true_val - 1.)**2
 df.to_pickle('results/%s.pkl' % pb.ident)

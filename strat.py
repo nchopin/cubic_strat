@@ -5,8 +5,9 @@ Nested stratified estimators.
 """
 
 from collections import Counter, defaultdict
-import itertools as itt
 import functools
+import itertools as itt
+import time
 
 from findiff import FinDiff
 import numpy as np
@@ -32,6 +33,19 @@ lambdas = list(itt.chain(*lambdas_nested))  # 1, -1, 3, -3, ...
 
 # moments of Unif[-1/2, 1/2]
 unif_mom = {k: 1. / (2**k * (k + 1)) for k in range(2, 11, 2)}
+
+def timer(func):
+    """Decorator that adds cpu time to the output.
+
+    Function must return a dict.
+    """
+    def timed_func(*args, **kwargs):
+        starting_time = time.perf_counter()
+        out = func(*args, **kwargs)
+        out['cpu'] = time.perf_counter() - starting_time
+        return out
+
+    return timed_func
 
 def cycles(*l):
     """List of all the circular shifts of a given list.
@@ -154,8 +168,8 @@ def zero_padding(func):
         if inside.ndim > 1:
             inside = np.all(inside, axis=1)
         out[inside] = func(u[inside])
-        neval = inside.sum()
-        return out, neval
+        nevals = inside.sum()
+        return out, nevals
     return zf
 
 def partial_sums(k, d, order=1, phi=None):
@@ -173,7 +187,8 @@ def partial_sums(k, d, order=1, phi=None):
             nevals[i] += ne
     return psums, nevals
 
-def vanish_estimates(k=10, d=2, order=1, phi=None):
+@timer
+def vanish_estimates(k, d, order=1, phi=None):
     """Compute all estimates up to a given order for a vanishing function.
     """
     phi = zero_padding(phi)
@@ -183,7 +198,7 @@ def vanish_estimates(k=10, d=2, order=1, phi=None):
     ests = np.empty(order)
     for i in range(order):
         ests[i] = np.dot(vander_system(i + 1), pmeans[:(i + 1)])
-    return ests, np.cumsum(nevals)
+    return {'estimates': ests, 'nevals': np.cumsum(nevals)}
 
 # General (non-vanishing) functions
 ###################################
@@ -436,6 +451,7 @@ def estimate(k, d, order=1, phi=None):
     else:
         raise NotImplementedError('Orders above 10 not implemented')
 
+@timer
 def estimate_with_nevals(k, d, order=1, phi=None):
     try:
         est = estimate(k, d, order=order, phi=phi)
