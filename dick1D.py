@@ -2,7 +2,7 @@ import numpy as np
 
 ident = 'dick1D'
 d = 1
-title_plot = r'$\varphi(x) = x e^x$'
+title_plot = r'$f_1(u)=ue^u$'
 mat_folder = 'simuDick/d1/'
 true_val = 1.
 min_neval = 9

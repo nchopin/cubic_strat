@@ -2,7 +2,7 @@ import numpy as np
 
 ident = 'dick2D'
 d = 2
-title_plot = r'$\varphi(x, y) = y  e^{xy}$'
+title_plot = r'$f_2(u)=u_2 e^{u_1 u_2}$'
 mat_folder = 'simuDick/d2'
 true_val = np.exp(1.) - 2.
 orders = [1, 2, 4, 6, 8, 10]

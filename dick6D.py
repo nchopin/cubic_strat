@@ -3,7 +3,7 @@ from scipy.special import factorial
 
 ident = 'dick6D'
 d = 6
-title_plot = r'$\varphi(x, y, z, t, u, v) = y z^2 t^3 u^4 v^5 e^{xyztuv}$'
+title_plot = r'$f_6(u)=\left(\prod_{i=2}^6 u_i^{i-1} \right) \exp\left\{\prod_{i=1}^6 u_i\right\}$'
 mat_folder = 'simuDick/d6'
 true_val = np.exp(1.) - np.sum(1. / factorial(np.arange(6)))
 orders = [1, 2, 4, 6, 8]

@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 
-import nvpima2 as pb
+import dick1D as pb
 
 df = pd.read_pickle('results/%s.pkl' % pb.ident)
 if 'rel-mse' in df:
@@ -14,7 +14,7 @@ else:
     dfm['rel-var'] = dfv['est'] / grand_mean**2
     key = 'rel-var'
 
-machine_eps = 3.2e-16
+machine_eps = 5.2e-15
 dfm = dfm[dfm[key] > machine_eps**2]
 
 dfds = {}
@@ -25,6 +25,7 @@ if hasattr(pb, 'mat_folder'):
                 dfd = pd.read_csv(f, sep=' ', names=['k', 'mse'], header=0)
                 dfd['N'] = 2**dfd['k']
                 dfd = dfd[dfd['N'] >= dfm['nevals'].min()]
+                dfd = dfd[dfd['mse'] > machine_eps**2]
                 dfds[a] = dfd
         except FileNotFoundError:
             print('Warning: no data for Dick est with alpha=%i' % a)

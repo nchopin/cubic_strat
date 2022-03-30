@@ -4,7 +4,7 @@ import pandas as pd
 from particles.utils import multiplexer
 import strat 
 
-import nvpima2 as pb
+import dick1D as pb
 
 results = []
 for order in pb.orders:
