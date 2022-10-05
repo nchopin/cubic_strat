@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from particles.utils import multiplexer
-import strat 
+import cubic_strat 
 
 import dick1D as pb
 
@@ -17,7 +17,7 @@ for order in pb.orders:
     karr = np.unique(np.round(np.exp(lkrange))).astype('int')
     ks = list(karr)
     print('order: %i, k=%r' % (order, ks))
-    rez = multiplexer(f=strat.estimate_with_nevals, d=pb.d, k=ks, 
+    rez = multiplexer(f=cubic_strat.estimate_with_nevals, d=pb.d, k=ks,
                       phi=pb.phi, order=[order], nruns=pb.nreps, nprocs=0)
     results += rez
 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from particles.utils import multiplexer
-import strat
+import cubic_strat
 
 # set considered problem here
 import pima2 as pb
@@ -16,8 +16,9 @@ karr = np.unique(np.round(np.exp(lkrange))).astype('int')
 ks = list(karr)
 print('k=%r' % ks)
 
-mp_results = multiplexer(f=strat.vanish_estimates, k=ks, d=pb.d, phi=pb.phi,
-                         order=pb.max_order, nruns=pb.nreps, nprocs=0)
+mp_results = multiplexer(f=cubic_strat.vanish_estimates, k=ks, d=pb.d, 
+                         phi=pb.phi, order=pb.max_order, nruns=pb.nreps, 
+                         nprocs=0)
 
 results = []
 for r in mp_results:

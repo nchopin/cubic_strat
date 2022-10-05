@@ -15,7 +15,7 @@ from numpy import random
 from scipy import linalg
 from scipy.special import comb
 
-import numdiff
+from cubic_strat import numdiff
 
 class StratError(Exception):
     pass
