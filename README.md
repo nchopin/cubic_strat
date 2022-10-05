@@ -47,6 +47,7 @@ It works the same way, except that:
 
 
 ```python
+    # compute vanishing estimator at orders 1 to 10
     est = cubs.vanishing_estimates(k, 2, order=10, phi=f)
 ```
 

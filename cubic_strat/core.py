@@ -190,6 +190,21 @@ def partial_sums(k, d, order=1, phi=None):
 @timer
 def vanish_estimates(k, d, order=1, phi=None):
     """Compute all estimates up to a given order for a vanishing function.
+
+    Parameters
+    ----------
+    k : int
+        index of the estimate; number of evals is O(k^d)
+    d: int
+        dimension; function is defined over [0, 1]^d
+    order: int
+        regularity of the function (r in the paper)
+    phi: function
+        function to integrate
+
+    Returns
+    -------
+    out: dictionary, with keys 'estimates' and 'nevals'
     """
     phi = zero_padding(phi)
     psums, nevals = partial_sums(k, d, order=order, phi=phi)
@@ -357,6 +372,23 @@ class cv_generator:
         return np.mean(deriv * (pu - avg))
 
 def estimate(k, d, order=1, phi=None):
+    """Non-vanishing estimator.
+
+    Parameters
+    ----------
+    k : int
+        index of the estimate; number of evals is 3*k^d
+    d: int
+        dimension; function is defined over [0, 1]^d
+    order: int
+        regularity of the function (r in the paper)
+    phi: function
+        function to integrate
+
+    Returns
+    -------
+    float
+    """
     N = k ** d
     h = 1. / k
     hh = 0.5 * h # half h
