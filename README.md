@@ -4,9 +4,9 @@ Stochastic integration with higher-order accuracy.
 
 ## Motivation ## 
 
-This package implements the two estimators proposed in the following paper: 
+This Python package implements the two estimators proposed in the following paper: 
 [Higher-order stochastic integration through cubic stratification](https://arxiv.org/abs/2210.01554)
-for estimating the integral $\int_{[0,1]^s} f(u)du$ for a function $f$. 
+for estimating the integral $\int_{[0,1]^s} f(u)du$ of a function $f$. 
 The package also contains script to reproduce the numerical experiments found
 in the paper. 
 
@@ -16,19 +16,23 @@ Consider the function $f(u)=\exp\{u_1 u_2^2\}$ over $[0, 1]^2$. To estimate its 
 must first define a Python function that computes $f$ for an array of vectors
 in $[0, 1]^2$:
 
+```python
     import numpy as np
 
     def f(u):
         return np.exp(u[:, 1] * u[:, 1]**2)
+```
 
 Then you may compute the estimator defined as $\widehat{I}_{r,k}(f)$ in the
 paper as follows:
 
+```python
     import cubic_strat as cubs
 
     k = 10
     r = 4  # order
     est = cubs.estimate(k, 2, order=r, phi=f)
+```
 
 ## Vanishing estimator ##
 
@@ -42,12 +46,14 @@ It works the same way, except that:
   given value, as explained in Section 4.2 in the paper:
 
 
+```python
     est = cubs.vanishing_estimates(k, 2, order=10, phi=f)
+```
 
 ## Numerical experiments ##
 
 The scripts that implement the numerical experiments in the paper may found in
-the following two folder: vanishing_xp, and nonvanishing_xp. 
+the following two folders: vanishing_xp, and nonvanishing_xp. 
 
 ## TODO ##
 
